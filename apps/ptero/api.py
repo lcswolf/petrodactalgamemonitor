@@ -6,15 +6,15 @@ Auth:
 - Application API key (admin): used to list servers across the panel.
 - Client API key: used to query per-server resource usage/status.
 
-By design, we keep HTTP and parsing logic here, and store the normalized results
-into our database in the poller.
+Security:
+- The monitor stores the Pterodactyl identifier internally, but public pages/API must NOT expose it.
 
 You can change endpoints in ONE place if your panel version differs.
 """
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional
 import requests
 
 @dataclass
@@ -29,6 +29,8 @@ class PteroServer:
 @dataclass
 class PteroStatus:
     state: str  # online/offline/unknown
+    cpu_percent: Optional[float] = None
+    memory_mb: Optional[int] = None
     players_online: Optional[int] = None
     players_max: Optional[int] = None
     ping_ms: Optional[int] = None
@@ -44,7 +46,11 @@ class PteroAPI:
     # ---------- low-level helpers ----------
     def _get(self, path: str, *, token: str) -> dict:
         url = f"{self.base_url}{path}"
-        r = requests.get(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=self.timeout)
+        r = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            timeout=self.timeout,
+        )
         r.raise_for_status()
         return r.json()
 
@@ -68,6 +74,7 @@ class PteroAPI:
             for item in items:
                 attr = item.get("attributes", {}) or {}
                 alloc = None
+
                 # Pterodactyl includes allocations in relationships (depends on include params).
                 # We'll try best-effort and leave ip/port blank if missing.
                 rel = attr.get("relationships", {}) or {}
@@ -78,19 +85,22 @@ class PteroAPI:
                         alloc = a_attr
                         break
 
-                servers.append(PteroServer(
-                    ptero_id=int(attr.get("id")),
-                    identifier=str(attr.get("identifier") or ""),
-                    name=str(attr.get("name") or f"server-{attr.get('id')}"),
-                    node_name=str((attr.get("node") or "") or ""),
-                    ip=str((alloc or {}).get("ip") or ""),
-                    port=int((alloc or {}).get("port")) if (alloc or {}).get("port") else None,
-                ))
+                servers.append(
+                    PteroServer(
+                        ptero_id=int(attr.get("id")),
+                        identifier=str(attr.get("identifier") or ""),
+                        name=str(attr.get("name") or f"server-{attr.get('id')}"),
+                        node_name=str((attr.get("node") or "") or ""),
+                        ip=str((alloc or {}).get("ip") or ""),
+                        port=int((alloc or {}).get("port")) if (alloc or {}).get("port") else None,
+                    )
+                )
 
             # pagination meta differs by version; handle common fields
             meta = data.get("meta", {}) or {}
             pagination = meta.get("pagination", {}) or {}
             total_pages = pagination.get("total_pages")
+
             if total_pages is None:
                 # If meta is missing, stop when response is empty.
                 if not items:
@@ -116,12 +126,15 @@ class PteroAPI:
         return self._get(f"/api/client/servers/{identifier}/resources", token=self.client_key)
 
     def parse_status(self, resources_json: dict) -> PteroStatus:
-        """Normalize a Pterodactyl 'resources' response to a simple status.
+        """Normalize a Pterodactyl 'resources' response to a simple status + CPU/RAM.
 
         Pterodactyl returns something like:
-            { "object": "stats", "attributes": { "current_state": "running", ... } }
+            { "object": "stats", "attributes": { "current_state": "running", "resources": {...} } }
 
-        We map 'running' -> online, 'offline'/'stopped' -> offline.
+        We map:
+          - running/starting -> online
+          - offline/stopping/stopped -> offline
+          - else -> unknown
         """
         attr = resources_json.get("attributes", {}) or {}
         current = (attr.get("current_state") or "").lower()
@@ -133,6 +146,25 @@ class PteroAPI:
         else:
             state = "unknown"
 
-        # We don't have player counts for every game automatically.
-        # Later versions can add per-game query integrations.
-        return PteroStatus(state=state, raw=resources_json)
+        resources = attr.get("resources", {}) or {}
+
+        cpu_abs = resources.get("cpu_absolute")
+        mem_bytes = resources.get("memory_bytes")
+
+        cpu_percent = None
+        if cpu_abs is not None:
+            try:
+                cpu_percent = float(cpu_abs)
+            except Exception:
+                cpu_percent = None
+
+        memory_mb = None
+        if isinstance(mem_bytes, (int, float)):
+            memory_mb = int(mem_bytes / 1024 / 1024)
+
+        return PteroStatus(
+            state=state,
+            cpu_percent=cpu_percent,
+            memory_mb=memory_mb,
+            raw=resources_json,
+        )

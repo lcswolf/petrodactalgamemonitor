@@ -6,6 +6,11 @@ Usage:
 
   # Only update status (faster once inventory exists)
   python manage.py poll_ptero
+
+Notes:
+- --sync uses the Application API key.
+- status polling uses the Client API key.
+- public pages/API must never expose server IP/port/identifier.
 """
 
 from __future__ import annotations
@@ -48,7 +53,7 @@ class Command(BaseCommand):
 
         if not base_url:
             raise CommandError("Missing PTERO_BASE_URL (set it in /admin/ Site Configuration or in .env).")
-        if not application_key and opts["sync"]:
+        if opts["sync"] and not application_key:
             raise CommandError("Missing Application API key (needed for --sync).")
         if not client_key:
             raise CommandError("Missing Client API key (needed to poll status).")
@@ -106,16 +111,35 @@ class Command(BaseCommand):
             status = api.parse_status(res)
 
             status_obj.state = status.state
+            status_obj.cpu_percent = status.cpu_percent
+            status_obj.memory_mb = status.memory_mb
+
+            # Future upgrades: players/ping from game query plugins
             status_obj.players_online = status.players_online
             status_obj.players_max = status.players_max
             status_obj.ping_ms = status.ping_ms
-            status_obj.last_checked_at = timezone.now()
-            status_obj.save(update_fields=["state", "players_online", "players_max", "ping_ms", "last_checked_at"])
 
+            status_obj.last_checked_at = timezone.now()
+            status_obj.save(
+                update_fields=[
+                    "state",
+                    "cpu_percent",
+                    "memory_mb",
+                    "players_online",
+                    "players_max",
+                    "ping_ms",
+                    "last_checked_at",
+                ]
+            )
+
+            # Optional notifications on state change
             if previous != status.state and previous != "unknown":
                 notifier.send(f"🔔 **{server.name}** changed: `{previous}` → `{status.state}`")
 
         except Exception:
+            # Mark unknown on any failure so UI shows "UNKNOWN" rather than stale data.
             status_obj.state = "unknown"
+            status_obj.cpu_percent = None
+            status_obj.memory_mb = None
             status_obj.last_checked_at = timezone.now()
-            status_obj.save(update_fields=["state", "last_checked_at"])
+            status_obj.save(update_fields=["state", "cpu_percent", "memory_mb", "last_checked_at"])

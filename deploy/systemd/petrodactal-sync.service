@@ -1,0 +1,11 @@
+[Unit]
+Description=Petrodactal daily inventory sync (Pterodactyl Application API)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/petrodactalgamemonitor
+ExecStart=/opt/petrodactalgamemonitor/.venv/bin/python /opt/petrodactalgamemonitor/manage.py poll_ptero --sync
