@@ -1,2 +1,11 @@
-touch .gitignore
-.env.example
+# secrets
+.env
+.env.*
+!.env.example
+
+# sqlite db + runtime data
+db.sqlite3
+*.sqlite3
+backups/
+__pycache__/
+*.pyc
