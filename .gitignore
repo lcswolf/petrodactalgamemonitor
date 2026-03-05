@@ -1,1 +1,2 @@
 touch .gitignore
+.env.example
