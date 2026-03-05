@@ -129,9 +129,29 @@ log "Installing Python requirements…"
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-log "Creating/Updating .env…"
-if [[ ! -f ".env" ]]; then
+# --- Ensure .env.example exists (so fresh git clones always work) ---
+if [ ! -f ".env.example" ]; then
+  echo "[install] .env.example missing — creating a default template..."
+  cat > .env.example <<'EOF'
+DEBUG=0
+ALLOWED_HOSTS=monitor.cymru-hosting.co.uk,localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=https://monitor.cymru-hosting.co.uk
+SECRET_KEY=
+ENCRYPTION_KEY=
+PTERO_BASE_URL=
+PTERO_APPLICATION_API_KEY=
+PTERO_CLIENT_API_KEY=
+DISCORD_WEBHOOK_URL=
+EOF
+fi
+
+# --- Create .env if it doesn't exist ---
+if [ ! -f ".env" ]; then
+  echo "[install] Creating/Updating .env…"
   cp .env.example .env
+  chmod 600 .env
+else
+  echo "[install] .env already exists — leaving it unchanged."
 fi
 
 # SECRET_KEY (used by Django to sign cookies etc.)
