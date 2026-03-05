@@ -276,3 +276,8 @@ echo "  http://${DOMAIN}/admin/"
 echo ""
 echo "Tip: First sync (imports servers from Pterodactyl):"
 echo "  sudo -u ${RUN_USER} ${APP_DIR}/.venv/bin/python ${APP_DIR}/manage.py poll_ptero --sync"
+# Ensure SQLite is writable (admin login writes sessions)
+chown root:www-data /opt/petrodactalgamemonitor/db.sqlite3 2>/dev/null || true
+chmod 660 /opt/petrodactalgamemonitor/db.sqlite3 2>/dev/null || true
+chown root:www-data /opt/petrodactalgamemonitor
+chmod 770 /opt/petrodactalgamemonitor
