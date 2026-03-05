@@ -1,6 +1,7 @@
 # secrets
 .env
 .env.*
+!.venv
 !.env.example
 
 # sqlite db + runtime data
