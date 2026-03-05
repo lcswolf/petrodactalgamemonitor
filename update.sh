@@ -105,3 +105,8 @@ log "Done!"
 echo ""
 echo "If something goes wrong, your backups are here:"
 echo "  ${BACKUP_DIR}"
+# Ensure SQLite is writable (admin login writes sessions)
+chown root:www-data /opt/petrodactalgamemonitor/db.sqlite3 2>/dev/null || true
+chmod 660 /opt/petrodactalgamemonitor/db.sqlite3 2>/dev/null || true
+chown root:www-data /opt/petrodactalgamemonitor
+chmod 770 /opt/petrodactalgamemonitor
