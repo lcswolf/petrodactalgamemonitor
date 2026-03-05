@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ clan.name }} • Petrodactal{% endblock %}
+{% block subtitle %}Clan page{% endblock %}
+{% block content %}
+  <h2 style="margin:0 0 10px 0;">{{ clan.name }}</h2>
+  {% if clan.description %}<p class="sub" style="margin-top:0;">{{ clan.description }}</p>{% endif %}
+  <div class="grid">
+    {% for s in servers %}
+      <div class="card">
+        <div class="row">
+          <div>
+            <div style="font-weight:700;">{{ s.name }}</div>
+            <div class="tiny">{{ s.node_name }}{% if s.ip and s.port %} • {{ s.ip }}:{{ s.port }}{% endif %}</div>
+          </div>
+          {% if s.status_state == "online" %}
+            <div class="status ok">ONLINE</div>
+          {% elif s.status_state == "offline" %}
+            <div class="status down">OFFLINE</div>
+          {% else %}
+            <div class="status unknown">UNKNOWN</div>
+          {% endif %}
+        </div>
+        <div class="tiny">
+          Players: {{ s.players_online|default:"—" }} / {{ s.players_max|default:"—" }} • Ping: {{ s.ping_ms|default:"—" }} ms
+        </div>
+      </div>
+    {% empty %}
+      <div class="card">No servers assigned to this clan yet.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

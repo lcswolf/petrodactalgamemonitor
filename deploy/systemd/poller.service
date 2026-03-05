@@ -1,0 +1,16 @@
+# /etc/systemd/system/petrodactal-poller.service
+#
+# One-shot poll run.
+# Used by the timer below.
+
+[Unit]
+Description=Petrodactal Poller (Pterodactyl status)
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/petrodactalgamemonitor
+EnvironmentFile=/opt/petrodactalgamemonitor/.env
+ExecStart=/opt/petrodactalgamemonitor/.venv/bin/python manage.py poll_ptero

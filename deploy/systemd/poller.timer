@@ -1,0 +1,14 @@
+# /etc/systemd/system/petrodactal-poller.timer
+#
+# Poll every 60 seconds.
+
+[Unit]
+Description=Run Petrodactal Poller every minute
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+Unit=petrodactal-poller.service
+
+[Install]
+WantedBy=timers.target

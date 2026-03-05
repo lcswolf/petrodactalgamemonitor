@@ -1,0 +1,27 @@
+# /etc/systemd/system/petrodactal-gunicorn.service
+#
+# Runs Django via Gunicorn (behind nginx).
+#
+# After copying:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now petrodactal-gunicorn
+
+[Unit]
+Description=Petrodactal Gunicorn Service
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/petrodactalgamemonitor
+EnvironmentFile=/opt/petrodactalgamemonitor/.env
+ExecStart=/opt/petrodactalgamemonitor/.venv/bin/gunicorn petrodactal.wsgi:application \
+  --bind 127.0.0.1:8001 \
+  --workers 2 \
+  --timeout 60
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
