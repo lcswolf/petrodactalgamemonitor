@@ -1,5 +1,16 @@
 # Petrodactal Game Monitor (Pterodactyl Status Panel)
 
+## Quick install (Ubuntu 24.04)
+
+```bash
+sudo bash install.sh
+```
+
+## Future updates
+
+```bash
+sudo bash update.sh
+```
 A self-hosted, modular **status panel** for game servers hosted on a **Pterodactyl** panel.
 
 Designed for:
