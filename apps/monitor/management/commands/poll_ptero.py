@@ -15,6 +15,7 @@ Notes:
 
 from __future__ import annotations
 
+import time
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -61,8 +62,10 @@ class Command(BaseCommand):
         api = PteroAPI(base_url=base_url, application_key=application_key, client_key=client_key)
         notifier = DiscordNotifier(webhook_url)
 
-        run_ok = True
-        run_msg = "OK"
+        poll_run = PollRun.objects.create(ok=True, message="In progress")
+
+        success_count = 0
+        failure_count = 0
 
         try:
             if opts["sync"]:
@@ -72,15 +75,37 @@ class Command(BaseCommand):
             if opts["limit"]:
                 qs = qs[: int(opts["limit"])]
 
-            for server in qs:
-                self._poll_one(api, notifier, server)
+            total = qs.count()
+            self.stdout.write(f"Polling {total} servers...")
+
+            for i, server in enumerate(qs, 1):
+                if self._poll_one(api, notifier, server):
+                    success_count += 1
+                else:
+                    failure_count += 1
+
+                # Small delay to be nice to the API
+                if i < total:
+                    time.sleep(0.3)
+
+            # Update final run status
+            if failure_count == 0:
+                poll_run.ok = True
+                poll_run.message = f"OK ({success_count} servers)"
+            else:
+                poll_run.ok = False if failure_count == total else True  # partial success
+                poll_run.message = f"{success_count} OK, {failure_count} failed"
+            poll_run.save()
+
+            self.stdout.write(self.style.SUCCESS(
+                f"Poll complete: {success_count} successful, {failure_count} failed"
+            ))
 
         except Exception as e:
-            run_ok = False
-            run_msg = f"{type(e).__name__}: {e}"
+            poll_run.ok = False
+            poll_run.message = f"Fatal error: {type(e).__name__}: {e}"
+            poll_run.save()
             raise
-        finally:
-            PollRun.objects.create(ok=run_ok, message=run_msg)
 
     @transaction.atomic
     def _sync_inventory(self, api: PteroAPI) -> None:
@@ -102,7 +127,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Inventory sync complete: {len(servers)} servers seen.")
 
-    def _poll_one(self, api: PteroAPI, notifier: DiscordNotifier, server: GameServer) -> None:
+    def _poll_one(self, api: PteroAPI, notifier: DiscordNotifier, server: GameServer) -> bool:
+        """Poll one server. Returns True if successful."""
         status_obj, _ = ServerStatus.objects.get_or_create(server=server)
         previous = status_obj.state
 
@@ -115,19 +141,15 @@ class Command(BaseCommand):
             status_obj.memory_mb = status.memory_mb
 
             # Future upgrades: players/ping from game query plugins
-            status_obj.players_online = status.players_online
-            status_obj.players_max = status.players_max
-            status_obj.ping_ms = status.ping_ms
+            status_obj.players_online = getattr(status, 'players_online', 0)
+            status_obj.players_max = getattr(status, 'players_max', 0)
+            status_obj.ping_ms = getattr(status, 'ping_ms', None)
 
             status_obj.last_checked_at = timezone.now()
             status_obj.save(
                 update_fields=[
-                    "state",
-                    "cpu_percent",
-                    "memory_mb",
-                    "players_online",
-                    "players_max",
-                    "ping_ms",
+                    "state", "cpu_percent", "memory_mb",
+                    "players_online", "players_max", "ping_ms",
                     "last_checked_at",
                 ]
             )
@@ -136,10 +158,14 @@ class Command(BaseCommand):
             if previous != status.state and previous != "unknown":
                 notifier.send(f"🔔 **{server.name}** changed: `{previous}` → `{status.state}`")
 
-        except Exception:
+            return True
+
+        except Exception as e:
+            self.stderr.write(f"Failed to poll {server.name} ({server.identifier}): {e}")
             # Mark unknown on any failure so UI shows "UNKNOWN" rather than stale data.
             status_obj.state = "unknown"
             status_obj.cpu_percent = None
             status_obj.memory_mb = None
             status_obj.last_checked_at = timezone.now()
             status_obj.save(update_fields=["state", "cpu_percent", "memory_mb", "last_checked_at"])
+            return False
