@@ -15,14 +15,23 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+
 def env(name: str, default: str = "") -> str:
     """Small helper to read environment variables safely."""
     return os.environ.get(name, default)
+
 
 SECRET_KEY = env("SECRET_KEY", "dev-only-change-me")
 DEBUG = env("DEBUG", "0") == "1"
 
 ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+
+# === Security & Production Checks ===
+if not DEBUG and (SECRET_KEY == "dev-only-change-me" or len(SECRET_KEY) < 30):
+    raise RuntimeError("In production (DEBUG=False) you MUST set a strong SECRET_KEY in .env")
+
+if not DEBUG and not ENCRYPTION_KEY:
+    raise RuntimeError("In production you MUST set ENCRYPTION_KEY (32+ chars) in .env")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -72,19 +81,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "petrodactal.wsgi.application"
 
 # Database: default to sqlite3 for simplest VPS setup.
-# You can swap to Postgres later.
-DATABASE_URL = env("DATABASE_URL", "").strip()
-if DATABASE_URL:
-    # Minimal parser for postgres URLs could be added later.
-    # For now: keep sqlite unless you explicitly wire a DB.
-    raise RuntimeError("DATABASE_URL parsing not implemented in v0.1; use SQLite or extend settings.py.")
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -110,6 +112,9 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = False  # set True after you confirm nginx TLS is correct
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 
 
 # App-level defaults (DB config overrides these at runtime)
@@ -118,3 +123,7 @@ PTERO_APPLICATION_API_KEY = env("PTERO_APPLICATION_API_KEY", "").strip()
 PTERO_CLIENT_API_KEY = env("PTERO_CLIENT_API_KEY", "").strip()
 ENCRYPTION_KEY = env("ENCRYPTION_KEY", "").strip()
 DISCORD_WEBHOOK_URL = env("DISCORD_WEBHOOK_URL", "").strip()
+
+# Validate ENCRYPTION_KEY length for Fernet (32 url-safe base64 chars)
+if ENCRYPTION_KEY and len(ENCRYPTION_KEY) < 32:
+    raise RuntimeError("ENCRYPTION_KEY must be at least 32 characters long (use Fernet.generate_key())")
