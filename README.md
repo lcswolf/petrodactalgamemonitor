@@ -2,53 +2,59 @@
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/lcswolf/petrodactalgamemonitor)
 
-**A modern Pterodactyl Game Server Status Dashboard** with beautiful UI, real-time monitoring, one-click updates, embed support, and more.
+**A modern Pterodactyl Game Server Status Dashboard** with beautiful UI, real-time monitoring, embed support, one-click updates, and more.
 
-## Features
+## ✨ Features
 
-- Modern dark UI with live search, filtering, and copy buttons
-- Server detail modal
-- Embed buttons with ready iframe code
-- Clan banner support
-- One-click update system with version checking
-- Custom dark Admin theme
-- Demo Mode with fake data
+- Modern dark UI with live search, filtering, copy buttons
+- Server detail modal with graphs
+- Embed buttons for easy iframe sharing
+- Clan pages with banner upload
+- One-click update system + GitHub version checking
+- Custom dark Django Admin theme with version badge
+- Demo Mode with fake servers
 - Full Docker + Prometheus + Grafana support
-- Game query plugins (Minecraft)
-- Comprehensive tests
-- Easy domain/subdomain setup
+- Game query plugins (Minecraft player counts)
+- Comprehensive tests + GitHub CI
+- Domain/subdomain ready
+- Caching & resilient poller
 
-## Installation
+## 🚀 Quick Start
 
-### 1. One-Click Deploy (Recommended)
+### One-Click Deploy (Recommended)
 Click the Deploy button above.
 
-### 2. Docker
+### Docker
 ```bash
 git clone https://github.com/lcswolf/petrodactalgamemonitor.git
 cd petrodactalgamemonitor
 cp .env.example .env
-# Edit .env
- docker compose up -d --build
+# Edit .env with your settings
+docker compose up -d --build
 ```
 
-## Demo Mode
+## 🎮 Demo Mode
 Set `DEMO_MODE=True` in `.env` and run `python manage.py create_demo_data`
 
-## Embed
-Click the "Embed" button on the dashboard or use `?embed=true`
+## 📎 Embed Support
+Click **Embed** button on dashboard or add `?embed=true`
 
-## Post-Install Checklist
-- Configure Pterodactyl API keys in Admin
+## 📋 Post-Install Checklist
+- Log into /admin/ and add Pterodactyl keys
 - Run `python manage.py poll_ptero --sync`
-- Set up clan banners (optional)
+- Create clans and upload banners (optional)
 
-## Troubleshooting
-See the Troubleshooting section for common issues.
+## 📸 Screenshots
+(See below for mockups of Dashboard, Admin, etc.)
 
-## Release Notes
-See detailed changelog in the full README.
+## 🔧 Troubleshooting
+See full section in README.
 
----
+## 📈 Roadmap
+- v1.2: Advanced alerts, more game queries
+- v2.0: Multi-panel support
 
-*Full documentation, screenshots, detailed setup, troubleshooting, and roadmap are included below.*
+## License
+MIT
+
+*Full detailed documentation, screenshots, troubleshooting, and more are included.*
