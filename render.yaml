@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: |
       pip install -r requirements.txt
-      python manage.py collectstatic --noinput --noinput
+      python manage.py collectstatic --noinput
     startCommand: gunicorn petrodactal.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DEBUG
