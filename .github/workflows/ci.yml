@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   test:
@@ -22,14 +22,13 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-        pip install pytest pytest-django ruff
+        pip install pytest pytest-django ruff responses
 
     - name: Lint with Ruff
       run: ruff check .
 
     - name: Run Tests
-      run: |
-        python manage.py test --settings=petrodactal.settings_test
+      run: python manage.py test --settings=petrodactal.settings_test --verbosity=2
 
     - name: Collect Static
       run: python manage.py collectstatic --noinput --dry-run
