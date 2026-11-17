@@ -113,6 +113,29 @@ else
     SITE_HOST="${SITE_HOST:-_}"
 fi
 
+if [[ ! "$SITE_HOST" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    fail "The hostname in .env is invalid. Use a hostname or IP address only."
+fi
+
+"$VENV_DIR/bin/python" - "$ENV_FILE" <<'PY'
+import sys
+from dotenv import dotenv_values
+from cryptography.fernet import Fernet
+
+values = dotenv_values(sys.argv[1])
+secret = values.get("DJANGO_SECRET_KEY") or ""
+key = values.get("ENCRYPTION_KEY") or ""
+if len(secret) < 50:
+    raise SystemExit("DJANGO_SECRET_KEY in .env must contain at least 50 characters.")
+try:
+    Fernet(key.encode("ascii"))
+except (ValueError, UnicodeEncodeError):
+    raise SystemExit("ENCRYPTION_KEY in .env must be a valid Fernet key.")
+for name in ("DB_NAME", "DB_USER", "DB_PASSWORD"):
+    if not values.get(name):
+        raise SystemExit(f"{name} must be set in .env.")
+PY
+
 log "Creating the PostgreSQL database and account"
 # The generated password contains only hexadecimal characters, making it
 # safe to insert into this SQL statement.
