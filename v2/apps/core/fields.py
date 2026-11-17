@@ -1,11 +1,12 @@
 import os
 from cryptography.fernet import Fernet, InvalidToken
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 
 
 def _fernet():
-    key = os.environ.get("ENCRYPTION_KEY", "")
+    key = getattr(settings, "ENCRYPTION_KEY", "") or os.environ.get("ENCRYPTION_KEY", "")
     if not key:
         raise ImproperlyConfigured("ENCRYPTION_KEY must be set before storing or reading encrypted secrets.")
     try:
