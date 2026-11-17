@@ -64,3 +64,17 @@ This is a proposed structure, not a claim that these components have already bee
 ## Development approach
 
 Build and test one small milestone at a time. Keep the old `main` branch unchanged, commit work on `rewrite-development`, and only merge after review and approval.
+
+## Current implementation status
+
+The initial domain-model layer is now present on the development branch:
+
+- Pterodactyl panel records.
+- Public community records and basic branding fields.
+- Game server records linked to a panel and optional community.
+- Timestamped metric samples and server status events.
+- Per-community or per-server Discord webhook configuration.
+- Django admin registrations for the initial models.
+- Fernet-backed encrypted model fields for panel API keys and Discord webhook URLs.
+
+The project has not yet been installed or executed on the VPS. Migrations, automated tests, Pterodactyl API calls, polling, alert delivery, public pages, and widgets remain to be implemented and verified. Generate a unique Fernet key for `ENCRYPTION_KEY` and keep it backed up securely; losing it makes stored secrets unreadable.
