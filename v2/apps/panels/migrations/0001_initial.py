@@ -1,4 +1,5 @@
 from django.db import migrations, models
+import apps.core.fields
 
 
 class Migration(migrations.Migration):
@@ -11,7 +12,7 @@ class Migration(migrations.Migration):
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("name", models.CharField(max_length=100)),
                 ("base_url", models.URLField()),
-                ("application_api_key", models.TextField()),
+                ("application_api_key", apps.core.fields.EncryptedTextField()),
                 ("is_active", models.BooleanField(default=True)),
                 ("last_synced_at", models.DateTimeField(blank=True, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
