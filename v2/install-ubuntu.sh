@@ -123,7 +123,15 @@ if [[ ! "$SITE_HOST" =~ ^[A-Za-z0-9._-]+$ ]]; then
     fail "The hostname in .env is invalid. Use a hostname or IP address only."
 fi
 
+# Honour database settings from an existing .env instead of silently using
+# the installer's defaults on a repeat install.
+DB_NAME="$(sed -n 's/^DB_NAME=//p' "$ENV_FILE" | tail -n 1)"
+DB_USER="$(sed -n 's/^DB_USER=//p' "$ENV_FILE" | tail -n 1)"
+DB_NAME="${DB_NAME:-petrodactal}"
+DB_USER="${DB_USER:-petrodactal}"
+
 "$VENV_DIR/bin/python" - "$ENV_FILE" <<'PY'
+import re
 import sys
 from dotenv import dotenv_values
 from cryptography.fernet import Fernet
@@ -140,20 +148,26 @@ except (ValueError, UnicodeEncodeError):
 for name in ("DB_NAME", "DB_USER", "DB_PASSWORD"):
     if not values.get(name):
         raise SystemExit(f"{name} must be set in .env.")
+for name in ("DB_NAME", "DB_USER"):
+    value = values.get(name) or ""
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,62}", value):
+        raise SystemExit(f"{name} must be a valid PostgreSQL identifier (letters, numbers, underscores; max 63 characters).")
+if not re.fullmatch(r"[A-Za-z0-9]+", values.get("DB_PASSWORD") or ""):
+    raise SystemExit("DB_PASSWORD must contain only letters and numbers for safe automated database setup.")
 PY
 
 log "Creating the PostgreSQL database and account"
 # The generated password contains only hexadecimal characters, making it
 # safe to insert into this SQL statement.
 if runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
-    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASSWORD';"
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER ROLE \"$DB_USER\" WITH LOGIN PASSWORD '$DB_PASSWORD';"
 else
-    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD';"
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "CREATE ROLE \"$DB_USER\" LOGIN PASSWORD '$DB_PASSWORD';"
 fi
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
     runuser -u postgres -- createdb --owner="$DB_USER" "$DB_NAME"
 else
-    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;"
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE \"$DB_NAME\" OWNER TO \"$DB_USER\";"
 fi
 
 log "Preparing database tables"
