@@ -62,7 +62,7 @@ systemctl enable --now postgresql
 
 log "Creating the dedicated application account"
 if ! id "$APP_USER" >/dev/null 2>&1; then
-    useradd --system --create-home --home-dir "/var/lib/$APP_USER" \
+    useradd --system --user-group --create-home --home-dir "/var/lib/$APP_USER" \
         --shell /usr/sbin/nologin "$APP_USER"
 fi
 
@@ -96,6 +96,7 @@ DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 DJANGO_DEBUG=false
 DJANGO_ALLOWED_HOSTS=$ALLOWED_HOSTS
+SITE_HOST=$SITE_HOST
 
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
@@ -111,7 +112,10 @@ else
     DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' "$ENV_FILE" | tail -n 1)"
     [[ -n "$DB_PASSWORD" ]] || fail "Existing .env has no DB_PASSWORD. Add one before rerunning."
     [[ "$DB_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || fail "DB_PASSWORD in .env must contain only letters and numbers for safe automated database setup."
-    SITE_HOST="$(awk -F= '/^DJANGO_ALLOWED_HOSTS=/{split($2, hosts, ","); if (length(hosts) >= 3) print hosts[3]}' "$ENV_FILE")"
+    SITE_HOST="$(sed -n 's/^SITE_HOST=//p' "$ENV_FILE" | tail -n 1)"
+    if [[ -z "$SITE_HOST" ]]; then
+        SITE_HOST="$(awk -F= '/^DJANGO_ALLOWED_HOSTS=/{split($2, hosts, ","); if (length(hosts) >= 3) print hosts[3]}' "$ENV_FILE")"
+    fi
     SITE_HOST="${SITE_HOST:-_}"
 fi
 
@@ -154,9 +158,8 @@ fi
 
 log "Preparing database tables"
 cd "$PROJECT_DIR"
-# This early-development installer generates the initial migrations from the
-# current models. Once migrations are committed to Git, this remains harmless.
-"$VENV_DIR/bin/python" manage.py makemigrations panels communities servers monitoring notifications
+# Database migrations are committed to Git so every installation uses the
+# same reviewed schema. Do not generate new migrations automatically here.
 "$VENV_DIR/bin/python" manage.py migrate --noinput
 "$VENV_DIR/bin/python" manage.py collectstatic --noinput
 
@@ -216,13 +219,20 @@ server {
 }
 EOF
 
-ln -sfn "$NGINX_SITE" /etc/nginx/sites-enabled/petrodactal-monitor
-# If the user chose a raw IP address, disable Ubuntu's stock default page
-# so the IP opens this application. For a named domain, leave other sites alone.
-if [[ "$SITE_HOST" =~ ^[0-9.]+$ ]] && [[ -L /etc/nginx/sites-enabled/default ]]; then
-    rm /etc/nginx/sites-enabled/default
+if [[ "$SITE_HOST" != "_" ]]; then
+    for conf in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*.conf; do
+        [[ -f "$conf" ]] || continue
+        if [[ "$(readlink -f "$conf")" == "$(readlink -f "$NGINX_SITE" 2>/dev/null || true)" ]]; then
+            continue
+        fi
+        if grep -Eq "server_name[[:space:]][^;]*([[:space:]]|^)$SITE_HOST([[:space:]]|;)" "$conf"; then
+            fail "Nginx already has a site configured for $SITE_HOST in $conf. Choose a different hostname; no existing site has been changed."
+        fi
+    done
 fi
 
+ln -sfn "$NGINX_SITE" /etc/nginx/sites-enabled/petrodactal-monitor
+# Leave the existing default site and all other Nginx sites untouched.
 nginx -t
 systemctl daemon-reload
 systemctl enable --now postgresql
