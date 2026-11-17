@@ -58,6 +58,8 @@ apt-get install -y \
     python3-pip \
     python3-venv
 
+systemctl enable --now postgresql
+
 log "Creating the dedicated application account"
 if ! id "$APP_USER" >/dev/null 2>&1; then
     useradd --system --create-home --home-dir "/var/lib/$APP_USER" \
@@ -215,8 +217,9 @@ server {
 EOF
 
 ln -sfn "$NGINX_SITE" /etc/nginx/sites-enabled/petrodactal-monitor
-# Disable Ubuntu's stock default site so this server block receives requests.
-if [[ -L /etc/nginx/sites-enabled/default ]]; then
+# If the user chose a raw IP address, disable Ubuntu's stock default page
+# so the IP opens this application. For a named domain, leave other sites alone.
+if [[ "$SITE_HOST" =~ ^[0-9.]+$ ]] && [[ -L /etc/nginx/sites-enabled/default ]]; then
     rm /etc/nginx/sites-enabled/default
 fi
 
