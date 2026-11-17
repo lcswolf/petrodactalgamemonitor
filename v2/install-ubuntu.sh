@@ -225,7 +225,7 @@ if [[ "$SITE_HOST" != "_" ]]; then
         if [[ "$(readlink -f "$conf")" == "$(readlink -f "$NGINX_SITE" 2>/dev/null || true)" ]]; then
             continue
         fi
-        if grep -Eq "server_name[[:space:]][^;]*([[:space:]]|^)$SITE_HOST([[:space:]]|;)" "$conf"; then
+        if awk -v host="$SITE_HOST" '/^[[:space:]]*server_name[[:space:]]/ { for (i = 2; i <= NF; i++) { gsub(/;/, "", $i); if ($i == host) found = 1 } } END { exit !found }' "$conf"; then
             fail "Nginx already has a site configured for $SITE_HOST in $conf. Choose a different hostname; no existing site has been changed."
         fi
     done
