@@ -25,8 +25,8 @@ class GameServer(models.Model):
         ordering = ["name"]
         constraints = [models.UniqueConstraint(fields=["panel", "external_id"], name="unique_panel_server_id")]
         indexes = [
-            models.Index(fields=["monitoring_enabled", "last_metrics_at"]),
-            models.Index(fields=["panel", "is_present_on_panel"]),
+            models.Index(fields=["monitoring_enabled", "last_metrics_at"], name="srv_mon_enabled_metrics_idx"),
+            models.Index(fields=["panel", "is_present_on_panel"], name="srv_panel_present_idx"),
         ]
 
     def __str__(self):
