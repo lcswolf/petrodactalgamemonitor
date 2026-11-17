@@ -193,8 +193,8 @@ Implemented on the development branch:
 Not yet implemented or verified:
 
 - The application has not yet been installed or tested on the project owner's VPS.
-- Automated tests and GitHub Actions checks have been added; their first run is pending.
-- The first committed database migrations are now included. They still need to pass the automated migration checks before we treat the installer as ready.
+- A GitHub Actions check workflow now runs the installer shell syntax check, Django configuration check, migration-drift check, database migrations, and automated tests against PostgreSQL. Its first successful run is still pending.
+- The first committed database migrations are included. They still need to pass the automated migration checks before we treat the installer as ready.
 - A systemd timer for automatic panel synchronisation.
 - Live server status and CPU/RAM polling.
 - Discord alert delivery.
