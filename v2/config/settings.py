@@ -69,4 +69,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Conservative defaults; enable secure cookies when HTTPS is configured.
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 X_FRAME_OPTIONS = "SAMEORIGIN"
