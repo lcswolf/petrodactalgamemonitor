@@ -44,6 +44,9 @@ apt-get install -y \
     git \
     libpq-dev \
     nginx \
+    openssl \
+    certbot \
+    python3-certbot-nginx \
     postgresql \
     postgresql-contrib \
     python3 \
@@ -102,19 +105,20 @@ else
     log "Existing .env found; preserving it"
     DB_PASSWORD="$(sed -n 's/^DB_PASSWORD=//p' "$ENV_FILE" | tail -n 1)"
     [[ -n "$DB_PASSWORD" ]] || fail "Existing .env has no DB_PASSWORD. Add one before rerunning."
-    SITE_HOST="$(sed -n 's/^DJANGO_ALLOWED_HOSTS=.*,//p' "$ENV_FILE" | cut -d, -f1)"
+    [[ "$DB_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || fail "DB_PASSWORD in .env must contain only letters and numbers for safe automated database setup."
+    SITE_HOST="$(awk -F= '/^DJANGO_ALLOWED_HOSTS=/{split($2, hosts, ","); if (length(hosts) >= 3) print hosts[3]}' "$ENV_FILE")"
     SITE_HOST="${SITE_HOST:-_}"
 fi
 
 log "Creating the PostgreSQL database and account"
 # The generated password contains only hexadecimal characters, making it
 # safe to insert into this SQL statement.
-sudo -u postgres psql -v ON_ERROR_STOP=1 -c \
+runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c \
     "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD'; ELSE ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASSWORD'; END IF; END \$\$;"
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
-    sudo -u postgres createdb --owner="$DB_USER" "$DB_NAME"
+if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
+    runuser -u postgres -- createdb --owner="$DB_USER" "$DB_NAME"
 else
-    sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;"
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER DATABASE $DB_NAME OWNER TO $DB_USER;"
 fi
 
 log "Preparing database tables"
