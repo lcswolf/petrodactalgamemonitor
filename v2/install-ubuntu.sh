@@ -139,8 +139,11 @@ PY
 log "Creating the PostgreSQL database and account"
 # The generated password contains only hexadecimal characters, making it
 # safe to insert into this SQL statement.
-runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c \
-    "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD'; ELSE ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASSWORD'; END IF; END \$\$;"
+if runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASSWORD';"
+else
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "CREATE ROLE $DB_USER LOGIN PASSWORD '$DB_PASSWORD';"
+fi
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
     runuser -u postgres -- createdb --owner="$DB_USER" "$DB_NAME"
 else
