@@ -16,7 +16,7 @@ Petrodactal Monitor v2 is a lightweight rewrite of the original application. Dev
 
 ## Installation
 
-An initial installer is provided for a **fresh Ubuntu 22.04 or 24.04 VPS**. It installs the operating-system packages, Python environment, PostgreSQL, Nginx, Gunicorn service, application secrets, and initial database tables.
+An initial installer is provided for an **Ubuntu 22.04 or 24.04 VPS**. A fresh VPS is simplest, but an existing server can be used if you choose a separate hostname for Petrodactal Monitor. It installs the operating-system packages, Python environment, PostgreSQL, Nginx, Gunicorn service, application secrets, and initial database tables.
 
 ### Before you start
 
@@ -28,7 +28,7 @@ You will need:
 - SSH access to the VPS.
 - A domain name pointing to the VPS if you want HTTPS using Let's Encrypt. You can use the VPS IP address initially, but do not enter real administrator credentials or panel API keys until HTTPS is enabled.
 
-**Important:** this installer configures Nginx as the website for this VPS and disables Ubuntu's stock Nginx default site. Do not run it on a server already hosting another website or using a custom Nginx configuration without reviewing the script first.
+**Important:** the installer adds a dedicated Nginx website configuration. Use a hostname that is not already assigned to another site. If you choose a raw IP address, it disables Ubuntu's stock Nginx default site so the IP opens Petrodactal Monitor; review existing Nginx configuration first if the VPS already hosts websites.
 
 ### 1. Connect to the VPS
 
