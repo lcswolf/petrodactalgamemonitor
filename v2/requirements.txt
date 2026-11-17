@@ -1,0 +1,4 @@
+# Keep the initial deployment small; add dependencies only when needed.
+Django>=5.2,<5.3
+gunicorn>=23,<24
+psycopg[binary]>=3.2,<4
