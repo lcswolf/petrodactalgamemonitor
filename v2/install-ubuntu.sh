@@ -25,6 +25,10 @@ fi
 if [[ ! -f "$PROJECT_DIR/manage.py" || ! -f "$PROJECT_DIR/requirements.txt" ]]; then
     fail "Run this script from the v2 folder in the Petrodactal repository."
 fi
+case "$PROJECT_DIR" in
+    /opt/*) ;;
+    *) fail "For the service account to access the files safely, clone the repository under /opt (for example /opt/petrodactal-monitor).";;
+esac
 
 if [[ ! -r /etc/os-release ]]; then
     fail "Cannot identify this operating system."
@@ -68,13 +72,12 @@ python3 -m venv "$VENV_DIR"
 SITE_HOST="_"
 if [[ ! -f "$ENV_FILE" ]]; then
     printf '\n'
-    read -r -p "Hostname or public IP for this installation (leave blank to configure later): " SITE_HOST_INPUT
-    if [[ -n "${SITE_HOST_INPUT:-}" ]]; then
-        if [[ ! "$SITE_HOST_INPUT" =~ ^[A-Za-z0-9.-]+$ ]]; then
-            fail "Use a simple hostname or IP address without a protocol or path."
-        fi
-        SITE_HOST="$SITE_HOST_INPUT"
+    read -r -p "Public hostname or IP address for this installation: " SITE_HOST_INPUT
+    [[ -n "${SITE_HOST_INPUT:-}" ]] || fail "A hostname or public IP is required. You can use the VPS IP address."
+    if [[ ! "$SITE_HOST_INPUT" =~ ^[A-Za-z0-9.-]+$ ]]; then
+        fail "Use a simple hostname or IP address without a protocol or path."
     fi
+    SITE_HOST="$SITE_HOST_INPUT"
 
     DB_PASSWORD="$(openssl rand -hex 24)"
     DJANGO_SECRET_KEY="$(openssl rand -hex 48)"
@@ -129,10 +132,11 @@ cd "$PROJECT_DIR"
 "$VENV_DIR/bin/python" manage.py migrate --noinput
 "$VENV_DIR/bin/python" manage.py collectstatic --noinput
 
-log "Creating the Django administrator (optional)"
-read -r -p "Create an admin login now? [Y/n]: " CREATE_ADMIN
-if [[ ! "${CREATE_ADMIN:-Y}" =~ ^[Nn]$ ]]; then
+log "Creating the Django administrator"
+if ! "$VENV_DIR/bin/python" manage.py shell -c "from django.contrib.auth import get_user_model; raise SystemExit(0 if get_user_model().objects.filter(is_superuser=True).exists() else 1)"; then
     "$VENV_DIR/bin/python" manage.py createsuperuser
+else
+    log "An administrator account already exists; leaving it unchanged"
 fi
 
 log "Configuring the Gunicorn systemd service"
