@@ -1,6 +1,7 @@
 from django.db import models
 from apps.servers.models import GameServer
 
+
 class MetricSample(models.Model):
     server = models.ForeignKey(GameServer, on_delete=models.CASCADE, related_name="metric_samples")
     sampled_at = models.DateTimeField(db_index=True)
@@ -12,7 +13,8 @@ class MetricSample(models.Model):
 
     class Meta:
         ordering = ["-sampled_at"]
-        indexes = [models.Index(fields=["server", "-sampled_at"])]
+        indexes = [models.Index(fields=["server", "-sampled_at"], name="mon_metric_server_time_idx")]
+
 
 class StatusEvent(models.Model):
     class Kind(models.TextChoices):
@@ -27,4 +29,4 @@ class StatusEvent(models.Model):
 
     class Meta:
         ordering = ["-occurred_at"]
-        indexes = [models.Index(fields=["server", "-occurred_at"])]
+        indexes = [models.Index(fields=["server", "-occurred_at"], name="mon_status_server_time_idx")]
