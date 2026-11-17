@@ -1,4 +1,5 @@
 from django.db import migrations, models
+import apps.core.fields
 import django.db.models.deletion
 
 
@@ -14,7 +15,7 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("name", models.CharField(default="Discord alerts", max_length=100)),
-                ("webhook_url_encrypted", models.TextField()),
+                ("webhook_url_encrypted", apps.core.fields.EncryptedTextField()),
                 ("notify_offline", models.BooleanField(default=True)),
                 ("notify_recovery", models.BooleanField(default=True)),
                 ("cpu_threshold_percent", models.PositiveSmallIntegerField(blank=True, null=True)),
