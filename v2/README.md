@@ -22,7 +22,7 @@ An initial installer is provided for an **Ubuntu 22.04 or 24.04 VPS**. A fresh V
 
 You will need:
 
-- A fresh Ubuntu VPS with a public IP address.
+- An Ubuntu 22.04 or 24.04 VPS with a public IP address.
 - A user with sudo access.
 - At least 1 GB RAM (2 GB is preferable while installing packages).
 - SSH access to the VPS.
