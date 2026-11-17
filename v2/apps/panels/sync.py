@@ -7,7 +7,7 @@ from apps.servers.models import GameServer
 from .services import PterodactylApplicationClient
 
 
-def sync_panel_servers(panel, client_class=PterodactylApplicationClient):
+def sync_panel_servers(panel, client_class=None):
     """Import/update panel servers without overwriting local monitor settings.
 
     Servers missing from a successful API listing are marked as no longer
@@ -16,6 +16,7 @@ def sync_panel_servers(panel, client_class=PterodactylApplicationClient):
     if not panel.is_active:
         raise ValueError("This Pterodactyl panel is disabled.")
 
+    client_class = client_class or PterodactylApplicationClient
     client = client_class(panel.base_url, panel.application_api_key)
     remote_servers = client.list_servers()
     checked_at = timezone.now()
