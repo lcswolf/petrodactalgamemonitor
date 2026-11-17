@@ -3,3 +3,4 @@ Django>=5.2,<5.3
 gunicorn>=23,<24
 psycopg[binary]>=3.2,<4
 cryptography>=44,<47
+python-dotenv>=1.0,<2
