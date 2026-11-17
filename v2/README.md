@@ -75,6 +75,6 @@ The initial domain-model layer is now present on the development branch:
 - Timestamped metric samples and server status events.
 - Per-community or per-server Discord webhook configuration.
 - Django admin registrations for the initial models.
-- Fernet-backed encrypted model fields for panel API keys and Discord webhook URLs.
+- Fernet-backed encrypted model fields for panel API keys and Discord webhook URLs.\n- A read-only Pterodactyl Application API client that can list all servers visible to a panel key, including pagination and safe error messages.
 
-The project has not yet been installed or executed on the VPS. Migrations, automated tests, Pterodactyl API calls, polling, alert delivery, public pages, and widgets remain to be implemented and verified. Generate a unique Fernet key for `ENCRYPTION_KEY` and keep it backed up securely; losing it makes stored secrets unreadable.
+The project has not yet been installed or executed on the VPS. The Pterodactyl API client has been added but has not yet been tested against a live panel. Database migrations, automated tests, importing servers into the database, resource polling, alert delivery, public pages, and widgets remain to be implemented and verified.\n\nThe Application API client is intentionally read-only. Pterodactyl's live CPU/RAM resource endpoint uses the Client API, not the Application API key. We will design that credential handling separately rather than incorrectly reusing the panel key. Generate a unique Fernet key for `ENCRYPTION_KEY` and keep it backed up securely; losing it makes stored secrets unreadable.
