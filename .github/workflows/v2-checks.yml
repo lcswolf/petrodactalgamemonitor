@@ -1,0 +1,66 @@
+name: Petrodactal v2 checks
+
+on:
+  push:
+    branches: [rewrite-development]
+    paths:
+      - "v2/**"
+      - ".github/workflows/v2-checks.yml"
+  pull_request:
+    branches: [rewrite-development]
+    paths:
+      - "v2/**"
+      - ".github/workflows/v2-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: petrodactal_test
+          POSTGRES_USER: petrodactal
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U petrodactal -d petrodactal_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: v2
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key-that-is-long-enough-for-django-validation-123456
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      DB_NAME: petrodactal_test
+      DB_USER: petrodactal
+      DB_PASSWORD: test-password
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: v2/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check Python syntax
+        run: python -m compileall -q .
+      - name: Check Django configuration
+        run: python manage.py check
+      - name: Check migrations match models
+        run: python manage.py makemigrations --check --dry-run
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
+      - name: Run automated tests
+        run: python manage.py test
